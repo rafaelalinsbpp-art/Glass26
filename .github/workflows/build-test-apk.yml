@@ -77,15 +77,34 @@ jobs:
           profile: pixel_5
           disable-animations: true
           script: |
-            set -e
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell pm list packages | grep -q com.glass26.app
-            adb shell ime list -s | grep -q com.glass26.app
+            set -euo pipefail
+            echo "Verificando disponibilidade do serviço PackageManager..."
+            ready=0
+            for attempt in $(seq 1 30); do
+              if adb shell pm path android 2>/dev/null | grep -q '^package:'; then
+                ready=1
+                break
+              fi
+              echo "PackageManager indisponível (tentativa $attempt/30)"
+              sleep 5
+            done
+            test "$ready" -eq 1
+            echo "Instalando APK por transferência não contínua..."
+            installed=0
+            for attempt in $(seq 1 6); do
+              if adb install --no-streaming -r app/build/outputs/apk/debug/app-debug.apk; then
+                installed=1
+                break
+              fi
+              echo "ADB ainda instável (tentativa $attempt/6)"
+              adb wait-for-device
+              sleep 8
+            done
+            test "$installed" -eq 1
+            adb shell pm path com.glass26.app | grep -q '^package:'
+            adb shell ime list -s | grep -q 'com.glass26.app'
             adb shell am start -W -n com.glass26.app/.HomeActivity
-            sleep 7
-            adb shell input tap 200 400
-            adb shell am start -W -n com.glass26.app/.HomeActivity
-            sleep 2
+            sleep 8
             adb shell screencap -p /sdcard/glass26.png
             adb pull /sdcard/glass26.png glass26-emulador.png
             adb logcat -d -s AndroidRuntime:E > android-runtime.txt
