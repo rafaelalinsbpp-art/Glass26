@@ -16,7 +16,7 @@ public final class GlassKeyboardService extends InputMethodService {
     @Override public View onCreateInputView(){
         board=new LinearLayout(this);board.setOrientation(LinearLayout.VERTICAL);
         board.setPadding(dp(3),dp(5),dp(3),dp(5));
-        board.setBackgroundColor(0xFFD2D8E7);
+        board.setBackgroundColor(AppearancePrefs.isDark(this)?0xFF30394E:0xFFD2D8E7);
         render();return board;
     }
     @Override public void onStartInput(EditorInfo info,boolean restart){
@@ -43,8 +43,9 @@ public final class GlassKeyboardService extends InputMethodService {
     }
     private TextView key(String s,boolean special){
         TextView v=new TextView(this);v.setText(s);v.setGravity(Gravity.CENTER);
-        v.setTextSize(s.length()>5?13:18);v.setTextColor(0xFF172239);
-        GradientDrawable g=new GradientDrawable();g.setColor(special?0xFFBAC5DF:0xFFF7F9FF);
+        v.setTextSize((s.length()>5?13:18)*AppearancePrefs.fontScale(this));
+        v.setTextColor(AppearancePrefs.isDark(this)?0xFFF7F9FF:0xFF172239);
+        GradientDrawable g=new GradientDrawable();g.setColor(AppearancePrefs.isDark(this)?(special?0xFF4F607F:0xFF65718C):(special?0xFFBAC5DF:0xFFF7F9FF));
         g.setCornerRadius(dp(6));v.setBackground(g);return v;
     }
     private void row(String... keys){
