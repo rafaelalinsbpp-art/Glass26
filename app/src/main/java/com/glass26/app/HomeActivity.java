@@ -45,7 +45,7 @@ public final class HomeActivity extends Activity {
         return v;
     }
     @Override public void onCreate(Bundle state){super.onCreate(state);loadApps();render();handler.post(updateClock);}
-    @Override public void onResume(){super.onResume();handler.removeCallbacks(updateClock);handler.post(updateClock);}
+    @Override public void onResume(){super.onResume();render();handler.removeCallbacks(updateClock);handler.post(updateClock);}
     @Override public void onDestroy(){handler.removeCallbacks(updateClock);super.onDestroy();}
     private void loadApps() {
         PackageManager pm=getPackageManager();
