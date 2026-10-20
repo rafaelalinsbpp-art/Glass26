@@ -1,0 +1,91 @@
+name: Glass26 Android - build, assinatura e teste
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Instalar SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Compilar APK de desenvolvimento
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Validar integridade, nome e assinatura do APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" | tail -1
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee apk-metadata.txt
+          grep -q "package: name='com.glass26.app'" apk-metadata.txt
+          sha256sum "$APK" | tee Glass26-SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Glass26-APK-debug-assinado
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            Glass26-SHA256.txt
+            apk-metadata.txt
+          if-no-files-found: error
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - run: gradle --no-daemon :app:assembleDebug
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell pm list packages | grep -q com.glass26.app
+            adb shell ime list -s | grep -q com.glass26.app
+            adb shell am start -W -n com.glass26.app/.HomeActivity
+            sleep 7
+            adb shell input tap 200 400
+            adb shell am start -W -n com.glass26.app/.HomeActivity
+            sleep 2
+            adb shell screencap -p /sdcard/glass26.png
+            adb pull /sdcard/glass26.png glass26-emulador.png
+            adb logcat -d -s AndroidRuntime:E > android-runtime.txt
+            if grep -E 'FATAL EXCEPTION|Process: com.glass26.app' android-runtime.txt; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Glass26-provas-emulador
+          path: |
+            glass26-emulador.png
+            android-runtime.txt
+          if-no-files-found: ignore
