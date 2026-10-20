@@ -39,8 +39,8 @@ public final class HomeActivity extends Activity {
         g.setStroke(d(1),0x70FFFFFF);return g;
     }
     private TextView text(String s,int size,boolean bold) {
-        TextView v=new TextView(this);v.setText(s);v.setTextSize(size);
-        v.setTextColor(-1);v.setGravity(Gravity.CENTER);
+        TextView v=new TextView(this);v.setText(s);v.setTextSize(size*AppearancePrefs.fontScale(this));
+        v.setTextColor(AppearancePrefs.foreground(this));v.setGravity(Gravity.CENTER);
         if(bold)v.setTypeface(android.graphics.Typeface.DEFAULT,1);
         return v;
     }
@@ -58,12 +58,13 @@ public final class HomeActivity extends Activity {
     private LinearLayout col(){LinearLayout c=new LinearLayout(this);c.setOrientation(LinearLayout.VERTICAL);c.setGravity(Gravity.CENTER);return c;}
     private void addGap(LinearLayout c,int height){View v=new View(this);c.addView(v,new LinearLayout.LayoutParams(1,d(height)));}
     private void render(){
-        getWindow().setStatusBarColor(0xFF17172B);
-        getWindow().setNavigationBarColor(0xFF0E1530);
+        boolean dark=AppearancePrefs.isDark(this);
+        getWindow().setStatusBarColor(dark?0xFF11182E:0xFFE3ECF8);
+        getWindow().setNavigationBarColor(dark?0xFF11182E:0xFFE3ECF8);
+        getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         root=new FrameLayout(this);
-        root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            new int[]{0xFF142650,0xFF6C438E,0xFFEF8A9F}));
-        String selected=getPreferences(0).getString("wall","");
+        root.setBackground(AppearancePrefs.gradient(this));
+        String selected=getSharedPreferences(AppearancePrefs.PREFERENCES,0).getString("wall","");
         if(!selected.isEmpty()) {
             try { ImageView wall=new ImageView(this);wall.setScaleType(ImageView.ScaleType.CENTER_CROP);
                 wall.setImageURI(Uri.parse(selected));
@@ -82,9 +83,12 @@ public final class HomeActivity extends Activity {
         stat.addView(brand,new LinearLayout.LayoutParams(0,d(35),1));
         stat.addView(power,new LinearLayout.LayoutParams(0,d(35),1));
         content.addView(stat);
+        TextView notices=action("◉  Notificações",()->startActivity(new Intent(this,NotificationCenterActivity.class)));
+        content.addView(notices,new LinearLayout.LayoutParams(-1,d(42)));
         addGap(content,17);
         TextView island=text("●   Glass26    •    "+now("HH:mm")+"    "+batteryLevel()+"%",14,true);
-        island.setBackground(glass(0xEE090D19,30));island.setPadding(d(20),0,d(20),0);
+        island.setBackground(glass(0xEE090D19,30));
+        island.setTextColor(0xFFFFFFFF);island.setPadding(d(20),0,d(20),0);
         content.addView(island,new LinearLayout.LayoutParams(d(255),d(46)));
         island.setOnClickListener(v->showTools());
         addGap(content,25);
@@ -104,8 +108,8 @@ public final class HomeActivity extends Activity {
             LinearLayout icons=row();
             for(int j=0;j<4;j++){
                 int ix=start+j;
-                if(ix<limit){ResolveInfo ri=apps.get(ix);icons.addView(appIcon(ri),new LinearLayout.LayoutParams(0,d(98),1));}
-                else icons.addView(new View(this),new LinearLayout.LayoutParams(0,d(98),1));
+                if(ix<limit){ResolveInfo ri=apps.get(ix);icons.addView(appIcon(ri),new LinearLayout.LayoutParams(0,d(AppearancePrefs.gridHeight(this)),1));}
+                else icons.addView(new View(this),new LinearLayout.LayoutParams(0,d(AppearancePrefs.gridHeight(this)),1));
             }
             content.addView(icons);
         }
@@ -117,7 +121,7 @@ public final class HomeActivity extends Activity {
         addGap(content,8);
         LinearLayout lower=row();
         lower.addView(button("◉ Ilha",()->showIslandOptions()),new LinearLayout.LayoutParams(0,d(55),1));
-        lower.addView(button("▣ Visual",()->showTools()),new LinearLayout.LayoutParams(0,d(55),1));
+        lower.addView(button("▣ Visual",()->startActivity(new Intent(this,AppearanceActivity.class))),new LinearLayout.LayoutParams(0,d(55),1));
         content.addView(lower);
         addGap(content,15);
         TextView dock=action("☰  Todos os aplicativos",()->allApps());
@@ -146,7 +150,7 @@ public final class HomeActivity extends Activity {
     }
     private TextView action(String name,Runnable run){
         TextView t=text(name,15,true);
-        t.setBackground(glass(0x667E8BAD,18));t.setOnClickListener(v->run.run());return t;
+        t.setBackground(AppearancePrefs.glass(this,18));t.setOnClickListener(v->run.run());return t;
     }
     private TextView button(String name,Runnable run){
         TextView t=action(name,run);LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)t.getLayoutParams();
@@ -160,7 +164,7 @@ public final class HomeActivity extends Activity {
             .setNegativeButton("Voltar",null).show();
     }
     private void showTools(){
-        String[] names={"Central de controle","Papel de parede","Prévia da tela de bloqueio","Ativar/desativar Ilha Dinâmica","Configurar teclado","Definir como tela inicial"};
+        String[] names={"Central de controle","Papel de parede","Prévia da tela de bloqueio","Ativar/desativar Ilha Dinâmica","Configurar teclado","Definir como tela inicial","Tema, fontes e espaçamento","Notificações Glass26"};
         new AlertDialog.Builder(this).setTitle("Personalizar Glass26").setItems(names,(dialog,index)->{
             switch(index){
                 case 0:showControl();break;
@@ -169,6 +173,8 @@ public final class HomeActivity extends Activity {
                 case 3:showIslandOptions();break;
                 case 4:keyboardSettings();break;
                 case 5:openSetting(Settings.ACTION_HOME_SETTINGS);break;
+                case 6:startActivity(new Intent(this,AppearanceActivity.class));break;
+                case 7:startActivity(new Intent(this,NotificationCenterActivity.class));break;
             }
         }).show();
     }
@@ -190,13 +196,13 @@ public final class HomeActivity extends Activity {
     private void lockPreview(){
         String[] styles={"Azul translúcido","Rosa translúcido"};
         new AlertDialog.Builder(this).setTitle("Tela de bloqueio — prévia visual")
-            .setSingleChoiceItems(styles,getPreferences(0).getInt("lock",0),(dialog,choice)->{
-                getPreferences(0).edit().putInt("lock",choice).apply();dialog.dismiss();showLockScreen();
+            .setSingleChoiceItems(styles,getSharedPreferences(AppearancePrefs.PREFERENCES,0).getInt("lock",0),(dialog,choice)->{
+                getSharedPreferences(AppearancePrefs.PREFERENCES,0).edit().putInt("lock",choice).apply();dialog.dismiss();showLockScreen();
             }).setNeutralButton("Ver prévia",(dialog,which)->showLockScreen()).show();
     }
     private void showLockScreen(){
         LinearLayout view=col();view.setPadding(d(20),d(80),d(20),d(80));
-        int st=getPreferences(0).getInt("lock",0);
+        int st=getSharedPreferences(AppearancePrefs.PREFERENCES,0).getInt("lock",0);
         view.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
             st==0?new int[]{0xFF273675,0xFF809FE4}:new int[]{0xFF672A71,0xFFEA9DB3}));
         view.addView(text(now("HH:mm"),64,true));view.addView(text(now("EEEE, dd MMMM"),19,false));
@@ -214,7 +220,7 @@ public final class HomeActivity extends Activity {
         if(request==26&&result==RESULT_OK&&data!=null&&data.getData()!=null){
             Uri uri=data.getData();
             try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}
-            getPreferences(0).edit().putString("wall",uri.toString()).apply();render();
+            getSharedPreferences(AppearancePrefs.PREFERENCES,0).edit().putString("wall",uri.toString()).apply();render();
             new AlertDialog.Builder(this).setTitle("Papel de parede")
                 .setMessage("A imagem já foi aplicada à tela inicial Glass26. Deseja aplicar também ao papel de parede do Android?")
                 .setPositiveButton("Aplicar",(di,which)->new Thread(()->{
