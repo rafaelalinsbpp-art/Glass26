@@ -69,6 +69,11 @@ jobs:
           gradle-version: '8.9'
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - run: gradle --no-daemon :app:assembleDebug
+      - name: Habilitar aceleração KVM no runner do emulador
+        run: |
+          test -c /dev/kvm
+          sudo chmod 666 /dev/kvm
+          ls -l /dev/kvm
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -76,6 +81,7 @@ jobs:
           arch: x86_64
           profile: pixel_5
           disable-animations: true
+          emulator-boot-timeout: 420
           script: |
             set -eu
             echo "Verificando disponibilidade do serviço PackageManager..."
