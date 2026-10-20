@@ -21,7 +21,7 @@ public final class GlassNotificationListener extends NotificationListenerService
         return list.size()>30?new ArrayList<>(list.subList(0,30)):list;
     }
     private static String shortText(CharSequence c){
-        String s=c==null?"":c.toString().replace('\\n',' ');
+        String s=c==null?"":c.toString().replace((char)10,' ');
         return s.length()>200?s.substring(0,200)+"…":s;
     }
     private synchronized void refresh(){
