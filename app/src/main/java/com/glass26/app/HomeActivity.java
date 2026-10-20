@@ -179,6 +179,9 @@ public final class HomeActivity extends Activity {
         }).show();
     }
     private void showControl(){
+        startActivity(new Intent(this,ControlCenterActivity.class));
+    }
+    private void showControlLegacy(){
         String[] names={"Wi-Fi (configuração oficial)","Bluetooth (configuração oficial)","Brilho e tela","Teclados","Configurações Android"};
         String[] intents={Settings.ACTION_WIFI_SETTINGS,Settings.ACTION_BLUETOOTH_SETTINGS,Settings.ACTION_DISPLAY_SETTINGS,Settings.ACTION_INPUT_METHOD_SETTINGS,Settings.ACTION_SETTINGS};
         new AlertDialog.Builder(this).setTitle("◫  Central Glass26").setItems(names,(d,i)->openSetting(intents[i]))
