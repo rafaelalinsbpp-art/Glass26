@@ -2,9 +2,18 @@ name: Glass26 Android - build, assinatura e teste
 on:
   push:
     branches: [main]
+    paths:
+      - 'app/**'
+      - 'settings.gradle'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/**'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: glass26-build-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
