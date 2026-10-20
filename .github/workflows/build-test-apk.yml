@@ -77,7 +77,7 @@ jobs:
           profile: pixel_5
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             echo "Verificando disponibilidade do serviço PackageManager..."
             ready=0
             for attempt in $(seq 1 30); do
