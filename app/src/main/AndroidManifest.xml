@@ -24,7 +24,7 @@
         </activity>
         <activity android:name=".AppearanceActivity" android:exported="false"/>
         <activity android:name=".NotificationCenterActivity" android:exported="false"/>
-        <service android:name=".GlassNotificationListener" android:exported="false"
+        <service android:name=".GlassNotificationListener" android:exported="true"
             android:label="Notificações Glass26"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
