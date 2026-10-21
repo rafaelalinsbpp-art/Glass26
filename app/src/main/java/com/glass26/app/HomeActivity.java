@@ -194,6 +194,9 @@ public final class HomeActivity extends Activity {
         spacer(body,15);
         body.addView(glassButton("⚙  Configurações do Glass26",()->moreOptions()),
             new LinearLayout.LayoutParams(-1,d(55)));
+        spacer(body,15);
+        body.addView(glassButton("◖  Ativar ou ajustar Ilha Dinâmica",()->showIslandOptions()),
+            new LinearLayout.LayoutParams(-1,d(55)));
         if(!isHomeLauncher()){
             spacer(body,15);
             body.addView(glassButton("⌂  Tornar launcher padrão",()->requestHomeRole()),
@@ -461,7 +464,7 @@ public final class HomeActivity extends Activity {
     }
     private void moreOptions(){
         String[] menu={"Todos os aplicativos","Tema, fontes e espaçamento","Notificações","Central de controle",
-            "Alterar papel de parede","Configurar teclado Glass26","Tela de bloqueio (prévia)","Definir Glass26 como launcher"};
+            "Alterar papel de parede","Configurar teclado Glass26","Tela de bloqueio (prévia)","Definir Glass26 como launcher","Ilha Dinâmica — configurar"};
         new AlertDialog.Builder(this).setTitle("Personalizar Glass26").setItems(menu,(dialog,i)->{
             switch(i){
                 case 0:allApps();break;
@@ -472,6 +475,7 @@ public final class HomeActivity extends Activity {
                 case 5:startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));break;
                 case 6:lockPreview();break;
                 case 7:requestHomeRole();break;
+                case 8:showIslandOptions();break;
             }
         }).show();
     }
