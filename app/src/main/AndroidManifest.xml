@@ -24,6 +24,7 @@
            </intent-filter>
         </activity>
         <activity android:name=".LockPreviewActivity" android:exported="false"/>
+        <activity android:name=".KeyboardTestActivity" android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".ControlCenterActivity" android:exported="false"/>
         <activity android:name=".AppearanceActivity" android:exported="false"/>
         <activity android:name=".NotificationCenterActivity" android:exported="false"/>
