@@ -140,7 +140,7 @@ public final class HomeActivity extends Activity {
     private void widgets(LinearLayout host){
         LinearLayout row=horizontal();
         LinearLayout weather=vertical();weather.setPadding(d(13),d(12),d(10),d(11));
-        weather.setBackground(GlassVisual.panel(this,22,false));
+        weather.setBackground(GlassVisual.panel(this,22,AppearancePrefs.isDark(this)));
         TextView small=text("CLIMA",11,true);small.setTextColor(0xFF32547B);
         weather.addView(small,new LinearLayout.LayoutParams(-1,d(23)));
         TextView sun=text("☀  --°",32,false);sun.setTextColor(0xFF125B94);
@@ -155,7 +155,7 @@ public final class HomeActivity extends Activity {
         LinearLayout.LayoutParams w=new LinearLayout.LayoutParams(0,d(158),1);
         w.rightMargin=d(7);row.addView(weather,w);
         LinearLayout media=vertical();media.setPadding(d(13),d(12),d(11),d(11));
-        media.setBackground(GlassVisual.panel(this,22,false));
+        media.setBackground(GlassVisual.panel(this,22,AppearancePrefs.isDark(this)));
         LinearLayout title=horizontal();title.setGravity(Gravity.CENTER_VERTICAL);
         TextView album=text("♫",29,true);album.setGravity(Gravity.CENTER);
         album.setBackground(GlassVisual.accent(this,12,0xFFF8A2AA,0xFFAA6DB9));
@@ -187,8 +187,8 @@ public final class HomeActivity extends Activity {
             LinearLayout row=horizontal();row.setGravity(Gravity.TOP);
             for(int i=0;i<4;i++){
                 int index=start+i;
-                if(index<count)row.addView(appCell(apps.get(index)),new LinearLayout.LayoutParams(0,d(109),1));
-                else row.addView(new View(this),new LinearLayout.LayoutParams(0,d(109),1));
+                if(index<count)row.addView(appCell(apps.get(index)),new LinearLayout.LayoutParams(0,d(AppearancePrefs.gridHeight(this)+11),1));
+                else row.addView(new View(this),new LinearLayout.LayoutParams(0,d(AppearancePrefs.gridHeight(this)+11),1));
             }
             host.addView(row);
         }
@@ -219,7 +219,7 @@ public final class HomeActivity extends Activity {
     private void floatingDock(){
         LinearLayout dock=horizontal();dock.setGravity(Gravity.CENTER);
         dock.setPadding(d(10),d(10),d(10),d(10));
-        dock.setBackground(GlassVisual.panel(this,25,false));
+        dock.setBackground(GlassVisual.panel(this,25,AppearancePrefs.isDark(this)));
         int[] picked=new int[4];Arrays.fill(picked,-1);
         String[][] preferences={
             {"com.google.android.dialer","com.samsung.android.dialer"},
