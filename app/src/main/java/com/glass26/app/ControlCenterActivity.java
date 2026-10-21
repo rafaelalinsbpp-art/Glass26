@@ -79,7 +79,7 @@ public final class ControlCenterActivity extends Activity {
         tile.addView(title,titlep);
         TextView note=text("Não Perturbe",13,true,white());
         tile.addView(note,new LinearLayout.LayoutParams(-1,d(24)));
-        tile.setOnClickListener(v->settings(Settings.ACTION_ZEN_MODE_SETTINGS));
+        tile.setOnClickListener(v->settings(Settings.ACTION_SOUND_SETTINGS));
         return tile;
     }
     private View levelCard(boolean brightness){
