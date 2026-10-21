@@ -321,11 +321,7 @@ public final class HomeActivity extends Activity {
             }
         }).show();
     }
-    private void lockPreview(){
-        new AlertDialog.Builder(this).setTitle("Tela de bloqueio — prévia")
-            .setMessage(now("HH:mm")+"\n"+now("EEEE, dd 'de' MMMM")+"\n\nA proteção de tela e a autenticação originais da Samsung continuam ativas.")
-            .setPositiveButton("Fechar",null).show();
-    }
+    private void lockPreview(){startActivity(new Intent(this,LockPreviewActivity.class));}
     private void chooseWallpaper(){
         Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
