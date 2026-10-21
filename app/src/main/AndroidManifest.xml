@@ -22,6 +22,7 @@
                <category android:name="android.intent.category.DEFAULT"/>
            </intent-filter>
         </activity>
+        <activity android:name=".LockPreviewActivity" android:exported="false"/>
         <activity android:name=".ControlCenterActivity" android:exported="false"/>
         <activity android:name=".AppearanceActivity" android:exported="false"/>
         <activity android:name=".NotificationCenterActivity" android:exported="false"/>
