@@ -170,10 +170,10 @@ python3 - <<'PY'
 import subprocess,xml.etree.ElementTree as ET,struct,time,re
 with open("glass26-teclado.png","rb") as file:
     raw=file.read(24)
-assert raw.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),"Missing screenshot PNG header"
+assert raw.startswith(b"\x89PNG\r\n\x1a\n"),"Missing screenshot PNG header"
 width,height=struct.unpack(">II",raw[16:24])
 density_output=subprocess.check_output(["adb","shell","wm","density"],text=True)
-matches=re.findall(r"(\\d+)",density_output)
+matches=re.findall(r"(\d+)",density_output)
 density=(int(matches[-1])/160) if matches else 2.75
 print("IME screenshot dimensions:",width,height,"density:",density,flush=True)
 x=round(width/18)
