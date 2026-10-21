@@ -38,20 +38,13 @@ public final class LockPreviewActivity extends Activity {
         root.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout page=vertical();page.setGravity(Gravity.CENTER_HORIZONTAL);
         page.setPadding(d(22),d(22),d(22),d(100));scroll.addView(page);
-        LinearLayout status=horizontal();status.setGravity(Gravity.CENTER_VERTICAL);
-        TextView left=label(now("HH:mm"),14,true);left.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        status.addView(left,new LinearLayout.LayoutParams(0,d(34),1));
-        TextView island=label("●",16,true);
-        island.setBackground(GlassVisual.island(this,28));
-        status.addView(island,new LinearLayout.LayoutParams(d(125),d(33)));
-        TextView right=label("▰  ◉",15,true);right.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
-        status.addView(right,new LinearLayout.LayoutParams(0,d(34),1));
-        page.addView(status,new LinearLayout.LayoutParams(-1,d(41)));
-        space(page,54);
+        // Shared status indicators with real clock, battery and network data.
+        space(page,91);
         TextView date=label(now("EEEE, d 'de' MMMM"),17,true);
         page.addView(date,new LinearLayout.LayoutParams(-1,d(44)));
-        TextView time=label(now("HH:mm"),82,true);
-        time.setLetterSpacing(-.065f);
+        int fontStyle=getSharedPreferences(AppearancePrefs.PREFERENCES,0).getInt("lockfont",1);
+        TextView time=label(now("HH:mm"),fontStyle==0?69:fontStyle==2?97:82,true);
+        time.setLetterSpacing(fontStyle==0?-.02f:-.065f);
         page.addView(time,new LinearLayout.LayoutParams(-1,d(113)));
         TextView lock=label("⌑",18,true);
         lock.setAlpha(.88f);page.addView(lock,new LinearLayout.LayoutParams(-1,d(32)));
@@ -76,6 +69,14 @@ public final class LockPreviewActivity extends Activity {
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,d(53),1);
         bp.leftMargin=d(12);actions.addView(back,bp);back.setOnClickListener(v->finish());
         page.addView(actions);
+        GlassStatusBar status=new GlassStatusBar(this);
+        FrameLayout.LayoutParams statusP=new FrameLayout.LayoutParams(-1,d(50),Gravity.TOP);
+        statusP.setMargins(d(17),d(6),d(17),0);
+        root.addView(status,statusP);
+        status.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("Ilha Dinâmica")
+            .setMessage("O recorte é uma prévia visual. Música e notificações reais aparecem na ilha opcional do Glass26 com as permissões apropriadas.")
+            .setPositiveButton("Entendi",null).show());
         setContentView(root);
     }
     private void addNotification(LinearLayout page){
