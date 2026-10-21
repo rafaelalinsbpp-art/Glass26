@@ -25,7 +25,6 @@ public final class KeyboardTestActivity extends Activity {
         getWindow().setNavigationBarColor(0xFF102D51);
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);
-        scroll.setBackground(new GlassVisual.Wallpaper(this).getBackground());
         FrameLayout root=new FrameLayout(this);
         root.addView(new GlassVisual.Wallpaper(this),new FrameLayout.LayoutParams(-1,-1));
         LinearLayout page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);
