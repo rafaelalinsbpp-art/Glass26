@@ -1,6 +1,7 @@
 package com.glass26.app;
 
 import android.app.*;
+import android.app.role.RoleManager;
 import android.content.*;
 import android.content.pm.*;
 import android.graphics.*;
@@ -16,6 +17,11 @@ import java.util.*;
 
 public final class HomeActivity extends Activity {
     private FrameLayout root;
+    private PagedScroller workspace;
+    private TextView pageIndicator;
+    private int currentPage=0;
+    private int totalPages=2;
+    private static final int ROLE_REQUEST=27;
     private TextView timeValue,batteryValue,dateValue;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ArrayList<ResolveInfo> apps=new ArrayList<>();
@@ -63,7 +69,12 @@ public final class HomeActivity extends Activity {
     private void spacer(LinearLayout l,int dp){
         l.addView(new View(this),new LinearLayout.LayoutParams(1,d(dp)));
     }
-    @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setFlags(1024,1024);loadApps();render();}
+    @Override public void onCreate(Bundle b){
+        super.onCreate(b);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        loadApps();render();
+    }
     @Override public void onResume(){super.onResume();loadApps();render();handler.removeCallbacks(tick);handler.post(tick);}
     @Override public void onPause(){handler.removeCallbacks(tick);super.onPause();}
     @Override public void onDestroy(){handler.removeCallbacks(tick);super.onDestroy();}
@@ -82,60 +93,181 @@ public final class HomeActivity extends Activity {
         apps.clear();apps.addAll(ordered.values());
     }
     private void render(){
-        getWindow().setNavigationBarColor(0xFF082650);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setStatusBarColor(0xFF0C2C54);
+        getWindow().setNavigationBarColor(0xFF0A2A4D);
         getWindow().getDecorView().setSystemUiVisibility(0);
         root=new FrameLayout(this);
         root.addView(new GlassVisual.Wallpaper(this),new FrameLayout.LayoutParams(-1,-1));
         String selected=getSharedPreferences(AppearancePrefs.PREFERENCES,0).getString("wall","");
         if(!selected.isEmpty())try{
-            ImageView wall=new ImageView(this);wall.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            ImageView wall=new ImageView(this);
+            wall.setScaleType(ImageView.ScaleType.CENTER_CROP);
             wall.setImageURI(Uri.parse(selected));
-            if(wall.getDrawable()!=null)root.addView(wall,new FrameLayout.LayoutParams(-1,-1));
+            if(wall.getDrawable()!=null)
+                root.addView(wall,new FrameLayout.LayoutParams(-1,-1));
         }catch(Exception ignored){}
-        ScrollView sc=new ScrollView(this);
-        sc.setFillViewport(true);sc.setClipToPadding(false);sc.setVerticalScrollBarEnabled(false);
-        FrameLayout.LayoutParams scp=new FrameLayout.LayoutParams(-1,-1);
-        root.addView(sc,scp);
-        LinearLayout body=vertical();body.setPadding(d(16),d(9),d(16),d(130));
-        sc.addView(body);
-        topBar(body);
-        spacer(body,17);
-        widgets(body);
-        spacer(body,24);
-        TextView heading=text("APLICATIVOS",11,true);heading.setLetterSpacing(.2f);
-        body.addView(heading,new LinearLayout.LayoutParams(-1,d(29)));
-        appGrid(body);
-        spacer(body,13);
-        LinearLayout actions=horizontal();
-        TextView n=glassButton("◉  Notificações",()->startActivity(new Intent(this,NotificationCenterActivity.class)));
-        TextView c=glassButton("▦  Central de controle",()->showControl());
-        LinearLayout.LayoutParams a=new LinearLayout.LayoutParams(0,d(44),1);a.rightMargin=d(5);
-        actions.addView(n,a);LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(0,d(44),1);ap.leftMargin=d(5);
-        actions.addView(c,ap);body.addView(actions);
+
+        totalPages=Math.max(2,1+(int)Math.ceil(Math.max(0,apps.size()-12)/20.0));
+        int pageWidth=getResources().getDisplayMetrics().widthPixels;
+        workspace=new PagedScroller(this);
+        workspace.setHorizontalScrollBarEnabled(false);
+        workspace.setFillViewport(true);
+        workspace.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout pages=horizontal();
+        workspace.addView(pages,new HorizontalScrollView.LayoutParams(-2,-1));
+        for(int page=0;page<totalPages;page++){
+            ScrollView verticalScroll=new ScrollView(this);
+            verticalScroll.setFillViewport(true);
+            verticalScroll.setVerticalScrollBarEnabled(false);
+            LinearLayout pageBody=vertical();
+            pageBody.setPadding(d(16),d(10),d(16),d(155));
+            verticalScroll.addView(pageBody);
+            if(page==0)firstPage(pageBody);
+            else additionalPage(pageBody,page);
+            pages.addView(verticalScroll,new LinearLayout.LayoutParams(pageWidth,-1));
+        }
+        root.addView(workspace,new FrameLayout.LayoutParams(-1,-1));
+        pageIndicator=text("",13,true);
+        pageIndicator.setGravity(Gravity.CENTER);
+        pageIndicator.setContentDescription("Indicador de páginas iniciais");
+        FrameLayout.LayoutParams indicatorPos=new FrameLayout.LayoutParams(-1,d(29),Gravity.BOTTOM);
+        indicatorPos.setMargins(0,0,0,d(110));
+        root.addView(pageIndicator,indicatorPos);
+        pageIndicator.setOnClickListener(v->goPage((currentPage+1)%totalPages));
+        updatePageIndicator();
         floatingDock();
         setContentView(root);
+        int restore=Math.min(Math.max(currentPage,0),totalPages-1);
+        workspace.post(()->workspace.scrollTo(restore*workspace.getWidth(),0));
         handler.removeCallbacks(tick);handler.post(tick);
     }
-    private void topBar(LinearLayout host){
-        LinearLayout bar=horizontal();bar.setGravity(Gravity.CENTER_VERTICAL);
-        timeValue=text(now("HH:mm"),14,true);
-        timeValue.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
-        bar.addView(timeValue,new LinearLayout.LayoutParams(0,d(42),1));
-        TextView island=text("●   Glass26",13,true);
-        island.setGravity(Gravity.CENTER);
-        island.setTextColor(0xFFFFFFFF);island.setShadowLayer(0,0,0,0);
-        island.setBackground(GlassVisual.island(this,40));
-        LinearLayout.LayoutParams center=new LinearLayout.LayoutParams(d(154),d(37));
-        bar.addView(island,center);
-        island.setOnClickListener(v->showIslandOptions());
-        batteryValue=text("▰ "+battery()+"%",13,true);
-        batteryValue.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
-        bar.addView(batteryValue,new LinearLayout.LayoutParams(0,d(42),1));
-        batteryValue.setOnClickListener(v->showControl());
-        host.addView(bar,new LinearLayout.LayoutParams(-1,d(48)));
-        dateValue=text(now("EEEE, d 'de' MMMM"),12,false);
-        dateValue.setGravity(Gravity.CENTER);dateValue.setAlpha(.86f);
-        host.addView(dateValue,new LinearLayout.LayoutParams(-1,d(22)));
+    private void firstPage(LinearLayout body){
+        // Use real Android/Samsung status bar indicators, not fake Wi-Fi or battery.
+        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView date=text(now("EEEE, d 'de' MMMM"),14,true);
+        header.addView(date,new LinearLayout.LayoutParams(0,d(48),1));
+        TextView menu=glassButton("⚙  Personalizar",()->moreOptions());
+        header.addView(menu,new LinearLayout.LayoutParams(d(128),d(40)));
+        body.addView(header);
+        spacer(body,23);
+        widgets(body);
+        spacer(body,26);
+        TextView heading=text("APLICATIVOS",11,true);
+        heading.setLetterSpacing(.2f);
+        body.addView(heading,new LinearLayout.LayoutParams(-1,d(28)));
+        addAppRange(body,0,12);
+        spacer(body,12);
+        LinearLayout actions=horizontal();
+        TextView notifications=glassButton("◉  Notificações",
+            ()->startActivity(new Intent(this,NotificationCenterActivity.class)));
+        TextView center=glassButton("▦  Central de controle",()->showControl());
+        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,d(46),1);
+        left.rightMargin=d(5);actions.addView(notifications,left);
+        LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,d(46),1);
+        right.leftMargin=d(5);actions.addView(center,right);
+        body.addView(actions);
+        if(!isHomeLauncher()){
+            spacer(body,14);
+            TextView choose=glassButton("⌂  Definir Glass26 como tela inicial",()->requestHomeRole());
+            body.addView(choose,new LinearLayout.LayoutParams(-1,d(49)));
+        }
+        spacer(body,10);
+        TextView hint=text("Deslize para a esquerda para ver mais aplicativos  ›",12,false);
+        hint.setGravity(Gravity.CENTER);
+        body.addView(hint,new LinearLayout.LayoutParams(-1,d(38)));
+    }
+    private void additionalPage(LinearLayout body,int page){
+        LinearLayout header=horizontal();header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title=text("Biblioteca de aplicativos",23,true);
+        header.addView(title,new LinearLayout.LayoutParams(0,d(61),1));
+        TextView all=glassButton("Todos",()->allApps());
+        header.addView(all,new LinearLayout.LayoutParams(d(76),d(45)));
+        body.addView(header);
+        TextView hint=text("Página "+(page+1)+" de "+totalPages+"  ·  Arraste para navegar",12,false);
+        body.addView(hint,new LinearLayout.LayoutParams(-1,d(33)));
+        spacer(body,17);
+        addAppRange(body,12+(page-1)*20,20);
+        spacer(body,18);
+        body.addView(glassButton("☰  Todos os aplicativos",()->allApps()),
+            new LinearLayout.LayoutParams(-1,d(55)));
+        spacer(body,15);
+        body.addView(glassButton("⚙  Configurações do Glass26",()->moreOptions()),
+            new LinearLayout.LayoutParams(-1,d(55)));
+        if(!isHomeLauncher()){
+            spacer(body,15);
+            body.addView(glassButton("⌂  Tornar launcher padrão",()->requestHomeRole()),
+                new LinearLayout.LayoutParams(-1,d(55)));
+        }
+    }
+    private void updatePageIndicator(){
+        if(pageIndicator==null)return;
+        StringBuilder dots=new StringBuilder();
+        for(int i=0;i<totalPages;i++){
+            if(i>0)dots.append("   ");
+            dots.append(i==currentPage?"●":"○");
+        }
+        pageIndicator.setText(dots.toString());
+        pageIndicator.setContentDescription("Página "+(currentPage+1)+" de "+totalPages+". Toque para mudar.");
+    }
+    private void goPage(int index){
+        if(workspace==null)return;
+        currentPage=Math.max(0,Math.min(index,totalPages-1));
+        workspace.smoothScrollTo(workspace.getWidth()*currentPage,0);
+        updatePageIndicator();
+    }
+    private final class PagedScroller extends HorizontalScrollView {
+        private float downX;
+        PagedScroller(Context context){super(context);}
+        @Override public boolean onInterceptTouchEvent(android.view.MotionEvent event){
+            if(event.getActionMasked()==MotionEvent.ACTION_DOWN)downX=event.getX();
+            return super.onInterceptTouchEvent(event);
+        }
+        @Override public boolean onTouchEvent(MotionEvent event){
+            if(event.getActionMasked()==MotionEvent.ACTION_DOWN)downX=event.getX();
+            if(event.getActionMasked()==MotionEvent.ACTION_UP){
+                float delta=event.getX()-downX;
+                final int current=currentPage;
+                final int selected=Math.abs(delta)>d(45)
+                    ?(delta<0?Math.min(totalPages-1,current+1):Math.max(0,current-1))
+                    :Math.round(getScrollX()/(float)Math.max(1,getWidth()));
+                boolean handled=super.onTouchEvent(event);
+                postDelayed(()->goPage(selected),25);
+                return handled;
+            }
+            return super.onTouchEvent(event);
+        }
+        @Override protected void onScrollChanged(int x,int y,int oldx,int oldy){
+            super.onScrollChanged(x,y,oldx,oldy);
+            if(getWidth()>0&&pageIndicator!=null){
+                int active=Math.max(0,Math.min(totalPages-1,Math.round(x/(float)getWidth())));
+                if(currentPage!=active){currentPage=active;updatePageIndicator();}
+            }
+        }
+    }
+    private boolean isHomeLauncher(){
+        if(android.os.Build.VERSION.SDK_INT>=29){
+            RoleManager rm=getSystemService(RoleManager.class);
+            return rm!=null&&rm.isRoleHeld(RoleManager.ROLE_HOME);
+        }
+        Intent home=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        ResolveInfo current=getPackageManager().resolveActivity(home,PackageManager.MATCH_DEFAULT_ONLY);
+        return current!=null&&current.activityInfo!=null&&getPackageName().equals(current.activityInfo.packageName);
+    }
+    private void requestHomeRole(){
+        if(isHomeLauncher()){
+            Toast.makeText(this,"Glass26 já é a tela inicial padrão",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if(Build.VERSION.SDK_INT>=29){
+            RoleManager roles=getSystemService(RoleManager.class);
+            if(roles!=null&&roles.isRoleAvailable(RoleManager.ROLE_HOME)){
+                startActivityForResult(roles.createRequestRoleIntent(RoleManager.ROLE_HOME),ROLE_REQUEST);
+                return;
+            }
+        }
+        try{startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));}
+        catch(Exception e){Toast.makeText(this,"Escolha Glass26 em Apps padrão > App da tela inicial",Toast.LENGTH_LONG).show();}
     }
     private void widgets(LinearLayout host){
         LinearLayout row=horizontal();
@@ -191,9 +323,9 @@ public final class HomeActivity extends Activity {
         m.leftMargin=d(7);row.addView(media,m);
         host.addView(row);
     }
-    private void appGrid(LinearLayout host){
-        final int count=Math.min(12,apps.size());
-        for(int start=0;start<count;start+=4){
+    private void addAppRange(LinearLayout host,int begin,int max){
+        final int count=Math.min(apps.size(),begin+max);
+        for(int start=begin;start<count;start+=4){
             LinearLayout row=horizontal();row.setGravity(Gravity.TOP);
             for(int i=0;i<4;i++){
                 int index=start+i;
@@ -273,11 +405,16 @@ public final class HomeActivity extends Activity {
     private void launch(ResolveInfo ri){
         try{
             PackageManager pm=getPackageManager();
-            Intent i=pm.getLaunchIntentForPackage(ri.activityInfo.packageName);
-            if(i==null)i=new Intent(Intent.ACTION_MAIN).setClassName(
+            android.content.ComponentName target=new android.content.ComponentName(
                 ri.activityInfo.packageName,ri.activityInfo.name);
+            Intent i=Intent.makeMainActivity(target);
+            i.addCategory(Intent.CATEGORY_LAUNCHER);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
             startActivity(i);
-        }catch(Exception e){Toast.makeText(this,"Não foi possível abrir",Toast.LENGTH_SHORT).show();}
+        }catch(Exception e){
+            android.util.Log.e("Glass26Launcher","Falha ao iniciar "+ri.activityInfo.packageName,e);
+            Toast.makeText(this,"Não foi possível abrir "+ri.loadLabel(getPackageManager()),Toast.LENGTH_LONG).show();
+        }
     }
     private void allApps(){
         loadApps();String[] names=new String[apps.size()];
@@ -334,7 +471,7 @@ public final class HomeActivity extends Activity {
                 case 4:chooseWallpaper();break;
                 case 5:startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));break;
                 case 6:lockPreview();break;
-                case 7:startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));break;
+                case 7:requestHomeRole();break;
             }
         }).show();
     }
@@ -348,6 +485,10 @@ public final class HomeActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
+        if(request==ROLE_REQUEST){
+            Toast.makeText(this,isHomeLauncher()?"Glass26 selecionado como tela inicial":"Você pode escolher o launcher nas configurações",Toast.LENGTH_SHORT).show();
+            render();return;
+        }
         if(request==26&&result==RESULT_OK&&data!=null&&data.getData()!=null){
             Uri uri=data.getData();
             try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}
