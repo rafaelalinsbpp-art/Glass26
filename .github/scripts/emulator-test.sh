@@ -120,6 +120,71 @@ for name in names:
 else:
     raise AssertionError("No known native application icon found in launcher")
 PY
+
+echo "Testing the Glass26 keyboard as the selected Android input method..."
+adb shell ime enable com.glass26.app/.GlassKeyboardService
+adb shell ime set com.glass26.app/.GlassKeyboardService
+adb shell am start -W -n com.glass26.app/.KeyboardTestActivity
+sleep 3
+adb shell uiautomator dump /sdcard/glass26-keyboard-field.xml >/dev/null
+adb pull /sdcard/glass26-keyboard-field.xml glass26-keyboard-field.xml >/dev/null
+python3 - <<'PY'
+import xml.etree.ElementTree as ET,re,subprocess
+root=ET.parse("glass26-keyboard-field.xml").getroot()
+inputs=[node for node in root.iter() if node.attrib.get("class","").endswith("EditText")]
+assert inputs, "Glass26 keyboard test EditText was not visible"
+bounds=inputs[0].attrib.get("bounds","")
+points=[int(v) for v in re.findall(r"\d+",bounds)]
+assert len(points)==4,bounds
+x=(points[0]+points[2])//2
+y=(points[1]+points[3])//2
+print("Focusing IME test field",x,y,flush=True)
+subprocess.check_call(["adb","shell","input","tap",str(x),str(y)])
+PY
+sleep 4
+adb shell uiautomator dump /sdcard/glass26-ime-keys.xml >/dev/null
+adb pull /sdcard/glass26-ime-keys.xml glass26-ime-keys.xml >/dev/null
+python3 - <<'PY'
+import xml.etree.ElementTree as ET,re,subprocess,time
+root=ET.parse("glass26-ime-keys.xml").getroot()
+text_labels=[node.attrib.get("text","") for node in root.iter()]
+print("IME key labels:",text_labels[-70:],flush=True)
+a=[node for node in root.iter() if node.attrib.get("text")=="a"]
+assert a, "Glass26 software keyboard was not rendered"
+bounds=a[0].attrib.get("bounds","")
+points=[int(v) for v in re.findall(r"\d+",bounds)]
+assert len(points)==4,bounds
+x=(points[0]+points[2])//2
+y=(points[1]+points[3])//2
+subprocess.check_call(["adb","shell","input","tap",str(x),str(y)])
+time.sleep(1)
+PY
+adb shell uiautomator dump /sdcard/glass26-ime-result.xml >/dev/null
+adb pull /sdcard/glass26-ime-result.xml glass26-ime-result.xml >/dev/null
+python3 - <<'PY'
+import xml.etree.ElementTree as ET
+root=ET.parse("glass26-ime-result.xml").getroot()
+edits=[n.attrib.get("text","") for n in root.iter() if n.attrib.get("class","").endswith("EditText")]
+print("Text entered using Glass26 IME:",edits,flush=True)
+assert any("a" in val.lower() for val in edits), "Glass26 IME tap did not type into the input field"
+PY
+adb shell screencap -p /sdcard/glass26-teclado.png
+adb pull /sdcard/glass26-teclado.png glass26-teclado.png
+
+echo "Testing lock-screen style preview, leaving Samsung secure keyguard untouched..."
+adb shell am start -W -n com.glass26.app/.LockPreviewActivity
+sleep 3
+adb shell screencap -p /sdcard/glass26-bloqueio.png
+adb pull /sdcard/glass26-bloqueio.png glass26-bloqueio.png
+adb shell uiautomator dump /sdcard/glass26-lock.xml >/dev/null
+adb pull /sdcard/glass26-lock.xml glass26-lock.xml >/dev/null
+python3 - <<'PY'
+import xml.etree.ElementTree as ET
+root=ET.parse("glass26-lock.xml").getroot()
+texts=[node.attrib.get("text","") for node in root.iter()]
+assert any("Prévia visual" in text for text in texts), "Glass26 lock-screen preview was not rendered"
+print("Lock preview shown without overriding system keyguard.",flush=True)
+PY
 adb shell input keyevent KEYCODE_HOME
 sleep 3
 adb logcat -d -s AndroidRuntime:E > android-runtime.txt
