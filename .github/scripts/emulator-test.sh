@@ -28,9 +28,31 @@ for attempt in $(seq 1 6); do
 done
 test "$installed" -eq 1
 
-echo "Checking package and keyboard registration..."
-adb shell pm path com.glass26.app | grep -q '^package:'
-adb shell ime list -s | grep -q 'com.glass26.app'
+echo "Checking package registration..."
+registered=0
+for attempt in $(seq 1 12); do
+  adb shell pm path com.glass26.app > glass26-package.txt 2>&1 || true
+  echo "Package check $attempt: $(cat glass26-package.txt)"
+  if grep -q 'package:' glass26-package.txt; then
+    registered=1
+    break
+  fi
+  sleep 3
+done
+test "$registered" -eq 1
+
+echo "Checking keyboard (IME) registration..."
+keyboard=0
+for attempt in $(seq 1 12); do
+  adb shell ime list -a -s > glass26-keyboards.txt 2>&1 || true
+  echo "IME check $attempt: $(cat glass26-keyboards.txt)"
+  if grep -q 'com.glass26.app' glass26-keyboards.txt; then
+    keyboard=1
+    break
+  fi
+  sleep 3
+done
+test "$keyboard" -eq 1
 
 echo "Launching Glass26 home..."
 adb logcat -c || true
