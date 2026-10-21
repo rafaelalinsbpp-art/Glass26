@@ -154,35 +154,50 @@ if buttons:
 PY
 sleep 5
 echo "Android input method diagnostics:"
-adb shell dumpsys input_method | grep -E 'mCurId=|mInputShown|mShowRequested|mIsInputViewShown|mServedView' | tail -12 || true
-adb shell uiautomator dump /sdcard/glass26-ime-keys.xml >/dev/null
-adb pull /sdcard/glass26-ime-keys.xml glass26-ime-keys.xml >/dev/null
-python3 - <<'PY'
-import xml.etree.ElementTree as ET,re,subprocess,time
-root=ET.parse("glass26-ime-keys.xml").getroot()
-text_labels=[node.attrib.get("text","") for node in root.iter()]
-print("IME key labels:",text_labels[-70:],flush=True)
-a=[node for node in root.iter() if node.attrib.get("text")=="a"]
-assert a, "Glass26 software keyboard was not rendered"
-bounds=a[0].attrib.get("bounds","")
-points=[int(v) for v in re.findall(r"\d+",bounds)]
-assert len(points)==4,bounds
-x=(points[0]+points[2])//2
-y=(points[1]+points[3])//2
-subprocess.check_call(["adb","shell","input","tap",str(x),str(y)])
-time.sleep(1)
-PY
-adb shell uiautomator dump /sdcard/glass26-ime-result.xml >/dev/null
-adb pull /sdcard/glass26-ime-result.xml glass26-ime-result.xml >/dev/null
-python3 - <<'PY'
-import xml.etree.ElementTree as ET
-root=ET.parse("glass26-ime-result.xml").getroot()
-edits=[n.attrib.get("text","") for n in root.iter() if n.attrib.get("class","").endswith("EditText")]
-print("Text entered using Glass26 IME:",edits,flush=True)
-assert any("a" in val.lower() for val in edits), "Glass26 IME tap did not type into the input field"
-PY
+adb shell dumpsys input_method > glass26-ime-status.txt
+grep -E 'mCurId=|mInputShown|mIsInputViewShown|mServedView' glass26-ime-status.txt | tail -14 || true
+grep -q 'mCurId=com.glass26.app/.GlassKeyboardService' glass26-ime-status.txt
+grep -q 'mIsInputViewShown=true' glass26-ime-status.txt
+
+echo "Capturing actual software-keyboard pixels before any accessibility inspection..."
 adb shell screencap -p /sdcard/glass26-teclado.png
 adb pull /sdcard/glass26-teclado.png glass26-teclado.png
+test -s glass26-teclado.png
+adb shell uiautomator dump /sdcard/glass26-ime-keys.xml >/dev/null
+adb pull /sdcard/glass26-ime-keys.xml glass26-ime-keys.xml >/dev/null
+echo "Testing real on-screen taps (Android accessibility hierarchy may omit IME windows)..."
+python3 - <<'PY'
+import subprocess,xml.etree.ElementTree as ET,struct,time,re
+with open("glass26-teclado.png","rb") as file:
+    raw=file.read(24)
+assert raw.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),"Missing screenshot PNG header"
+width,height=struct.unpack(">II",raw[16:24])
+density_output=subprocess.check_output(["adb","shell","wm","density"],text=True)
+matches=re.findall(r"(\\d+)",density_output)
+density=(int(matches[-1])/160) if matches else 2.75
+print("IME screenshot dimensions:",width,height,"density:",density,flush=True)
+x=round(width/18)
+placeholder="Toque aqui e digite com Glass26"
+def edit_contents():
+    subprocess.check_call(["adb","shell","uiautomator","dump","/sdcard/glass26-ime-result.xml"],stdout=subprocess.DEVNULL)
+    subprocess.check_call(["adb","pull","/sdcard/glass26-ime-result.xml","glass26-ime-result.xml"],stdout=subprocess.DEVNULL)
+    root=ET.parse("glass26-ime-result.xml").getroot()
+    return [n.attrib.get("text","") for n in root.iter() if n.attrib.get("class","").endswith("EditText")]
+for distance_dp in (150,165,180,195,210,225,135,245):
+    y=height-round(distance_dp*density)
+    print("Tapping software-keyboard candidate:",x,y,"distance dp:",distance_dp,flush=True)
+    subprocess.check_call(["adb","shell","input","tap",str(x),str(y)])
+    time.sleep(0.8)
+    texts=edit_contents()
+    print("Text after tap:",texts,flush=True)
+    if any(value and value!=placeholder for value in texts):
+        print("PASS: selected Glass26 IME typed into Android EditText",flush=True)
+        break
+else:
+    raise AssertionError("IME is shown according to Android, but physical screen taps did not insert text")
+PY
+adb shell screencap -p /sdcard/glass26-teclado-digitando.png
+adb pull /sdcard/glass26-teclado-digitando.png glass26-teclado-digitando.png
 
 echo "Testing lock-screen style preview, leaving Samsung secure keyguard untouched..."
 adb shell am start -W -n com.glass26.app/.LockPreviewActivity
