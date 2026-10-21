@@ -90,5 +90,11 @@ jobs:
           name: Glass26-provas-emulador
           path: |
             glass26-emulador.png
+            glass26-pagina2.png
+            glass26-teclado.png
+            glass26-bloqueio.png
+            glass26-workspace.xml
+            glass26-ime-result.xml
+            glass26-ime-keys.xml
             android-runtime.txt
           if-no-files-found: ignore
