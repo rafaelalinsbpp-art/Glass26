@@ -54,14 +54,74 @@ for attempt in $(seq 1 12); do
 done
 test "$keyboard" -eq 1
 
-echo "Launching Glass26 home..."
+echo "Assigning Glass26 as the Android Home role holder..."
+adb shell cmd role add-role-holder android.app.role.HOME com.glass26.app
+adb shell cmd role get-role-holders android.app.role.HOME | grep -q 'com.glass26.app'
+
+echo "Launching launcher through the actual Android HOME intent..."
 adb logcat -c || true
-adb shell am start -W -n com.glass26.app/.HomeActivity
-sleep 10
+adb shell input keyevent KEYCODE_HOME
+sleep 7
 adb shell pidof com.glass26.app | grep -Eq '[0-9]+'
 adb shell screencap -p /sdcard/glass26.png
 adb pull /sdcard/glass26.png glass26-emulador.png
 test -s glass26-emulador.png
+
+echo "Testing swipe to the second launcher page..."
+adb shell input swipe 900 1040 170 1040 490
+sleep 4
+adb shell uiautomator dump /sdcard/glass26-workspace.xml >/dev/null
+adb pull /sdcard/glass26-workspace.xml glass26-workspace.xml >/dev/null
+python3 - <<'PY'
+import xml.etree.ElementTree as ET
+root=ET.parse("glass26-workspace.xml").getroot()
+texts=[node.attrib.get("text","") for node in root.iter()]
+print("UI after swipe:",texts[:50])
+assert any("Biblioteca de aplicativos" in x for x in texts), "Horizontal swipe did not change the launcher page"
+assert any("Página 2" in x for x in texts), "Second page marker missing"
+PY
+adb shell screencap -p /sdcard/glass26-pagina2.png
+adb pull /sdcard/glass26-pagina2.png glass26-pagina2.png
+
+echo "Testing HOME key brings the default launcher back..."
+adb shell am start -W -a android.settings.SETTINGS
+sleep 3
+adb shell input keyevent KEYCODE_HOME
+sleep 3
+adb shell pidof com.glass26.app | grep -Eq '[0-9]+'
+adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|ResumedActivity' | tail -6
+
+echo "Testing a tap on a real launcher icon..."
+adb shell input swipe 160 1040 900 1040 490
+sleep 3
+adb shell uiautomator dump /sdcard/glass26-icons.xml >/dev/null
+adb pull /sdcard/glass26-icons.xml glass26-icons.xml >/dev/null
+python3 - <<'PY'
+import xml.etree.ElementTree as ET,re,subprocess,time
+root=ET.parse("glass26-icons.xml").getroot()
+names=("Config.","Configurações","Settings","Câmera","Camera")
+for name in names:
+    nodes=[n for n in root.iter() if n.attrib.get("text","")==name]
+    if not nodes: continue
+    bounds=nodes[0].attrib.get("bounds","")
+    points=[int(v) for v in re.findall(r"\d+",bounds)]
+    if len(points)==4:
+        x=(points[0]+points[2])//2
+        y=(points[1]+points[3])//2
+        print("Tapping icon label:",name,x,y,flush=True)
+        subprocess.check_call(["adb","shell","input","tap",str(x),str(y)])
+        time.sleep(3)
+        activities=subprocess.check_output(["adb","shell","dumpsys","activity","activities"],text=True)
+        resumed=[line for line in activities.splitlines() if "ResumedActivity" in line or "topResumedActivity" in line or "mResumedActivity" in line]
+        print("After tap:",resumed[-5:],flush=True)
+        if "com.glass26.app/.HomeActivity" in "\n".join(resumed):
+            raise AssertionError("App icon tap did not open its Android app")
+        break
+else:
+    raise AssertionError("No known native application icon found in launcher")
+PY
+adb shell input keyevent KEYCODE_HOME
+sleep 3
 adb logcat -d -s AndroidRuntime:E > android-runtime.txt
 
 if grep -q 'FATAL EXCEPTION' android-runtime.txt; then
