@@ -122,6 +122,9 @@ else:
 PY
 
 echo "Testing the Glass26 keyboard as the selected Android input method..."
+echo "Allowing software keyboard while emulator exposes a hardware keyboard..."
+adb shell settings put secure show_ime_with_hard_keyboard 1
+adb shell settings get secure show_ime_with_hard_keyboard
 adb shell ime enable com.glass26.app/.GlassKeyboardService
 adb shell ime set com.glass26.app/.GlassKeyboardService
 adb shell am start -W -n com.glass26.app/.KeyboardTestActivity
@@ -140,8 +143,18 @@ x=(points[0]+points[2])//2
 y=(points[1]+points[3])//2
 print("Focusing IME test field",x,y,flush=True)
 subprocess.check_call(["adb","shell","input","tap",str(x),str(y)])
+buttons=[n for n in root.iter() if "3. Escrever no campo de teste" in n.attrib.get("text","")]
+if buttons:
+    area=[int(v) for v in re.findall(r"\d+",buttons[0].attrib.get("bounds",""))]
+    if len(area)==4:
+        bx=(area[0]+area[2])//2
+        by=(area[1]+area[3])//2
+        print("Explicitly requesting keyboard from test activity",bx,by,flush=True)
+        subprocess.check_call(["adb","shell","input","tap",str(bx),str(by)])
 PY
-sleep 4
+sleep 5
+echo "Android input method diagnostics:"
+adb shell dumpsys input_method | grep -E 'mCurId=|mInputShown|mShowRequested|mIsInputViewShown|mServedView' | tail -12 || true
 adb shell uiautomator dump /sdcard/glass26-ime-keys.xml >/dev/null
 adb pull /sdcard/glass26-ime-keys.xml glass26-ime-keys.xml >/dev/null
 python3 - <<'PY'
