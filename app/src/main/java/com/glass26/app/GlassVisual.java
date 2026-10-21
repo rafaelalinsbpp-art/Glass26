@@ -39,8 +39,10 @@ public final class GlassVisual {
             super.onDraw(canvas);
             float w=getWidth(),h=getHeight();
             if(w<=0||h<=0)return;
+            boolean dark=AppearancePrefs.isDark(getContext());
             p.setShader(new LinearGradient(0,0,w*.8f,h,
-                new int[]{0xFF102B5D,0xFF1683AD,0xFF43C4C3,0xFF07245D},
+                dark?new int[]{0xFF09162F,0xFF0C3F69,0xFF126D80,0xFF06152F}
+                    :new int[]{0xFF102B5D,0xFF1683AD,0xFF43C4C3,0xFF07245D},
                 new float[]{0f,.34f,.64f,1f},Shader.TileMode.CLAMP));
             canvas.drawRect(0,0,w,h,p);
             p.setShader(new RadialGradient(w*.9f,h*.25f,w*.8f,
