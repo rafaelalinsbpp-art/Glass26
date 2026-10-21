@@ -69,6 +69,13 @@ public final class GlassStatusBar extends View {
         Paint.FontMetrics fm=paint.getFontMetrics();
         float baseline=(h-(fm.bottom+fm.top))/2f;
         canvas.drawText(time.format(new Date()),d(8),baseline,paint);
+        // Camera-area capsule: a visual element within Glass26, not Android's SystemUI.
+        paint.setColor(0xFF050910);
+        tmp.set(w/2-d(62),h/2-d(15),w/2+d(62),h/2+d(15));
+        canvas.drawRoundRect(tmp,d(17),d(17),paint);
+        paint.setColor(0xFF13263D);
+        canvas.drawCircle(w/2+d(45),h/2,d(4.5f),paint);
+        paint.setColor(Color.WHITE);
         float right=w-d(8);
         float cx=right-d(14),cy=h/2f;
         // Battery outline and real fill percentage.
@@ -108,5 +115,6 @@ public final class GlassStatusBar extends View {
             }
         }
         paint.setStyle(Paint.Style.FILL);
+        postInvalidateDelayed(15000);
     }
 }
