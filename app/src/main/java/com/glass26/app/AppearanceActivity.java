@@ -46,6 +46,13 @@ public final class AppearanceActivity extends Activity {
             choose("Tamanho da fonte","font",new String[]{"Compacta","Normal","Grande","Muito grande"}));
         item("▦   Espaçamento entre aplicativos",()->
             choose("Espaçamento dos ícones","spacing",new String[]{"Compacto","Padrão","Amplo"}));
+        item("◉   Relógio da tela de bloqueio",()->
+            choose("Estilo do relógio na prévia","lockfont",
+                new String[]{"Compacto","Padrão Liquid Glass","Relógio grande"}));
+        item("⌨   Testar teclado Glass26",()->
+            startActivity(new android.content.Intent(this,KeyboardTestActivity.class)));
+        item("▣   Prévia da tela de bloqueio",()->
+            startActivity(new android.content.Intent(this,LockPreviewActivity.class)));
         TextView preview=new TextView(this);
         preview.setGravity(Gravity.CENTER_VERTICAL);
         preview.setTextColor(AppearancePrefs.foreground(this));
