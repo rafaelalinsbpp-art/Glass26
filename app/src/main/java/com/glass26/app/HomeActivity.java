@@ -71,7 +71,8 @@ public final class HomeActivity extends Activity {
     }
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         loadApps();render();
     }
@@ -93,7 +94,8 @@ public final class HomeActivity extends Activity {
         apps.clear();apps.addAll(ordered.values());
     }
     private void render(){
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setStatusBarColor(0xFF0C2C54);
         getWindow().setNavigationBarColor(0xFF0A2A4D);
         getWindow().getDecorView().setSystemUiVisibility(0);
@@ -121,13 +123,18 @@ public final class HomeActivity extends Activity {
             verticalScroll.setFillViewport(true);
             verticalScroll.setVerticalScrollBarEnabled(false);
             LinearLayout pageBody=vertical();
-            pageBody.setPadding(d(16),d(10),d(16),d(155));
+            pageBody.setPadding(d(16),d(54),d(16),d(155));
             verticalScroll.addView(pageBody);
             if(page==0)firstPage(pageBody);
             else additionalPage(pageBody,page);
             pages.addView(verticalScroll,new LinearLayout.LayoutParams(pageWidth,-1));
         }
         root.addView(workspace,new FrameLayout.LayoutParams(-1,-1));
+        GlassStatusBar status=new GlassStatusBar(this);
+        FrameLayout.LayoutParams statusPos=new FrameLayout.LayoutParams(-1,d(49),Gravity.TOP);
+        statusPos.setMargins(d(18),d(3),d(18),0);
+        root.addView(status,statusPos);
+        status.setOnClickListener(v->showIslandOptions());
         pageIndicator=text("",13,true);
         pageIndicator.setGravity(Gravity.CENTER);
         pageIndicator.setContentDescription("Indicador de páginas iniciais");
