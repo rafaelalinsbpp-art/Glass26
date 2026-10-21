@@ -11,7 +11,7 @@ import java.util.*;
 
 public final class GlassKeyboardService extends InputMethodService {
     private LinearLayout board;
-    private boolean shift=false, symbols=false;
+    private boolean shift=false, symbols=false,emoji=false;
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}
     @Override public View onCreateInputView(){
         board=new LinearLayout(this);board.setOrientation(LinearLayout.VERTICAL);
@@ -26,12 +26,12 @@ public final class GlassKeyboardService extends InputMethodService {
         super.onStartInput(info,restart);
         int type=info==null?0:info.inputType & InputType.TYPE_MASK_CLASS;
         symbols=type==InputType.TYPE_CLASS_NUMBER||type==InputType.TYPE_CLASS_PHONE;
-        shift=false;if(board!=null)render();
+        shift=false;emoji=false;if(board!=null)render();
     }
     private void render(){
         if(board==null)return;board.removeAllViews();
         LinearLayout header=new LinearLayout(this);header.setOrientation(LinearLayout.HORIZONTAL);
-        TextView brand=key("◉  Glass26",true);brand.setTextSize(12);
+        TextView brand=key("Português (Brasil)  ·  Glass26",true);brand.setTextSize(12);
         brand.setGravity(Gravity.CENTER_VERTICAL);
         brand.setPadding(dp(16),0,0,0);
         header.addView(brand,new LinearLayout.LayoutParams(0,dp(34),1));
@@ -44,7 +44,11 @@ public final class GlassKeyboardService extends InputMethodService {
         });
         LinearLayout.LayoutParams top=new LinearLayout.LayoutParams(-1,dp(34));
         top.bottomMargin=dp(6);board.addView(header,top);
-        if(symbols){
+        if(emoji){
+            row("😀","😁","😂","😊","😍","🥰","😎","😭");
+            row("👍","❤️","🙏","🔥","🎉","✨","💙","👋");
+            row("😉","😅","🤔","🙌","😘","👏","💕","🌟");
+        }else if(symbols){
             row("1","2","3","4","5","6","7","8","9","0");
             row("@","#","$","%","&","-","+","(",")","/");
             row("ABC","*","'","!",":",";","?","⌫");
@@ -53,7 +57,7 @@ public final class GlassKeyboardService extends InputMethodService {
             row("a","s","d","f","g","h","j","k","l");
             row("⇧","z","x","c","v","b","n","m","⌫");
         }
-        row(symbols?"ABC":"?123","🌐",",","espaço",".","↵");
+        row(emoji?"ABC":symbols?"ABC":"?123","☺",",","espaço",".","↵");
     }
     private TextView key(String s,boolean special){
         TextView v=new TextView(this);v.setText(s);v.setGravity(Gravity.CENTER);
@@ -73,7 +77,7 @@ public final class GlassKeyboardService extends InputMethodService {
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(49));
         rp.bottomMargin=dp(4);board.addView(r,rp);
         for(String s:keys){
-            boolean special=s.equals("ABC")||s.equals("?123")||s.equals("🌐")||s.equals("⇧")||s.equals("⌫")||s.equals("↵");
+            boolean special=s.equals("ABC")||s.equals("?123")||s.equals("☺")||s.equals("🌐")||s.equals("⇧")||s.equals("⌫")||s.equals("↵");
             TextView v=key(s,special);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(45),s.equals("espaço")?4.5f:1f);
             p.setMargins(dp(2),0,dp(2),0);r.addView(v,p);
@@ -93,8 +97,9 @@ public final class GlassKeyboardService extends InputMethodService {
         switch(s){
             case "⌫":c.deleteSurroundingTextInCodePoints(1,0);return;
             case "⇧":shift=!shift;render();return;
-            case "ABC":symbols=false;render();return;
-            case "?123":symbols=true;render();return;
+            case "ABC":symbols=false;emoji=false;render();return;
+            case "?123":symbols=true;emoji=false;render();return;
+            case "☺":emoji=!emoji;symbols=false;render();return;
             case "espaço":commit(" ");return;
             case "🌐":{
                 android.view.inputmethod.InputMethodManager im=(android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
