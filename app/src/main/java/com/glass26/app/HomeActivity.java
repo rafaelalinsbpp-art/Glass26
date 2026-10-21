@@ -172,9 +172,19 @@ public final class HomeActivity extends Activity {
         progress.setBackground(GlassVisual.accent(this,4,0xFF66B9DE,0xFF9EE9E3));
         media.addView(progress,new LinearLayout.LayoutParams(-1,d(4)));
         spacer(media,8);
-        TextView playback=text("◀◀     ▶❚❚     ▶▶",18,true);
-        playback.setTextColor(0xFF214F81);playback.setGravity(Gravity.CENTER);
-        playback.setShadowLayer(0,0,0,0);
+        LinearLayout playback=horizontal();playback.setGravity(Gravity.CENTER);
+        String[] symbols={"◀◀","▶❚❚","▶▶"};
+        int[] mediaKeys={KeyEvent.KEYCODE_MEDIA_PREVIOUS,KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,KeyEvent.KEYCODE_MEDIA_NEXT};
+        for(int i=0;i<3;i++){
+            final int key=mediaKeys[i];
+            TextView control=text(symbols[i],17,true);
+            control.setTextColor(0xFF214F81);
+            control.setGravity(Gravity.CENTER);
+            control.setSingleLine(true);
+            control.setShadowLayer(0,0,0,0);
+            control.setOnClickListener(v->sendMediaKey(key));
+            playback.addView(control,new LinearLayout.LayoutParams(0,d(35),1));
+        }
         media.addView(playback,new LinearLayout.LayoutParams(-1,d(35)));
         media.setOnClickListener(v->mediaDialog());
         LinearLayout.LayoutParams m=new LinearLayout.LayoutParams(0,d(158),1);
@@ -275,6 +285,13 @@ public final class HomeActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Todos os aplicativos")
             .setItems(names,(d,index)->launch(apps.get(index)))
             .setNegativeButton("Voltar",null).show();
+    }
+    private void sendMediaKey(int code){
+        android.media.AudioManager audio=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);
+        if(audio!=null){
+            audio.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,code));
+            audio.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,code));
+        }
     }
     private void mediaDialog(){
         new AlertDialog.Builder(this).setTitle("Mídia Glass26")
