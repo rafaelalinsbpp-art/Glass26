@@ -61,6 +61,15 @@ public final class KeyboardTestActivity extends Activity {
         addButton(page,"‹  Voltar",()->finish());
         root.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
         setContentView(root);
+        editor.setFocusableInTouchMode(true);
+        editor.setShowSoftInputOnFocus(true);
+        editor.requestFocus();
+        editor.postDelayed(()->{
+            if(isFinishing())return;
+            editor.requestFocus();
+            InputMethodManager manager=(InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            if(manager!=null)manager.showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT);
+        },650);
     }
     private void addButton(LinearLayout host,String name,Runnable action){
         TextView view=text(name,15);view.setGravity(Gravity.CENTER);
